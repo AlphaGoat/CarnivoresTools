@@ -1,0 +1,7 @@
+Main Menu Button coords (top_left_x, to_right_y, w, h):
+	hunt: (21, 220, 284, 60)
+	options: (21, 283, 284, 60)
+	trophy: (21, 357, 284, 60)
+	credits: (21, 426, 284, 60)
+	quit: (21, 494, 284, 60)
+	

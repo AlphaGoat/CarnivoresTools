@@ -880,6 +880,7 @@ class MAPReader():
 def bytes_to_int(bytes):
     return int.from_bytes(bytes, byteorder='big', signed=False) 
 
+
 def read_map_file(file_path):
     # Open map as both 8 bit and 16 bit arrays
     with open(file_path, "rb") as f1:

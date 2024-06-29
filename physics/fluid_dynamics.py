@@ -42,8 +42,10 @@ def generate_perlin_noise_2d(
 
     # Divide coordinates by the number of seed points
     # along each axis
-    norm_Y = Y / num_seed_points[0]
-    norm_X = X / num_seed_points[1]
+    norm_factors = (map_shape[0]  / num_seed_points[0],
+            map_shape[1] / num_seed_points[1])
+    norm_Y = Y / norm_factors[0]
+    norm_X = X / norm_factors[1]
 
     # Get corner points of square containing each point
     x0 = np.floor(norm_X)
@@ -66,27 +68,31 @@ def generate_perlin_noise_2d(
                            axis=-1)
 
     # Get vectors from corner to point (x, y)
-    v_00 = np.stack([norm_Y - y0, norm_X - x0], axis=-1)
-    v_10 = np.stack([norm_Y - y1, norm_X - x0], axis=-1)
-    v_01 = np.stack([norm_Y - y0, norm_X - x1], axis=-1)
-    v_11 = np.stack([norm_Y - y1, norm_X - x1], axis=-1)
+    v_00 = np.stack([norm_Y - y0, norm_X - x0], axis=-1) / np.array(num_seed_points)
+    v_10 = np.stack([norm_Y - y1, norm_X - x0], axis=-1) / np.array(num_seed_points)
+    v_01 = np.stack([norm_Y - y0, norm_X - x1], axis=-1) / np.array(num_seed_points)
+    v_11 = np.stack([norm_Y - y1, norm_X - x1], axis=-1) / np.array(num_seed_points)
 
     # Get scalar displacement values
-    import pdb; pdb.set_trace()
-    delta_00 = np.dot(v_00, np.take(rand_grads, indices_00))
-    delta_01 = np.dot(v_01, np.take(rand_grads, indices_01))
-    delta_10 = np.dot(v_10, np.take(rand_grads, indices_10))
-    delta_11 = np.dot(v_11, np.take(rand_grads, indices_11))
+    delta_00 = np.matmul(v_00, rand_grads[indices_00[:, 0], indices_00[:, 1]])
+    delta_01 = np.matmul(v_01, rand_grads[indices_01[:, 0], indices_01[:, 1]])
+    delta_10 = np.matmul(v_10, rand_grads[indices_10[:, 0], indices_10[:, 1]])
+    delta_11 = np.matmul(v_11, rand_grads[indices_11[:, 0], indices_11[:, 1]])
 
     # Define the noise function for each point (y, x)
     def noise(y, x):
-        out =  joint_fade_fn(1 - y, 1 - x) * delta_00
-        out += joint_fade_fn(y, 1 - x) * delta_10
-        out += joint_fade_fn(1 - y, x) * delta_01
-        out += joint_fade_fn(y, x) * delta_11
+        out =  joint_fade_fn(1 - y, 1 - x)[..., None] * delta_00
+        out += joint_fade_fn(y, 1 - x)[..., None] * delta_10
+        out += joint_fade_fn(1 - y, x)[..., None] * delta_01
+        out += joint_fade_fn(y, x)[..., None] * delta_11
+        import pdb; pdb.set_trace()
         return out
 
-    vector_field = np.sum([dampen_factor**i * noise(y, x) for i in num_iter])
+    norm_Y /= num_seed_points[0]
+    norm_X /= num_seed_points[1]
+
+#    vector_field = np.sum([dampen_factor**i * noise(Y, X) for i in range(num_iter)], axis=0)
+    vector_field = np.sum([dampen_factor**i * noise(norm_Y, norm_X) for i in range(num_iter)], axis=0)
 
     return vector_field
 
@@ -127,9 +133,10 @@ if __name__ == "__main__":
         plt.show()
 
     
-    vector_field = generate_perlin_noise_2d((1024, 1024),
+    vector_field = generate_perlin_noise_2d((128, 128),
                                             num_seed_points=(8, 8),
                                             dampen_factor=1.0,
                                             num_iter=100)
+    import pdb; pdb.set_trace()
     plot_vector_field(vector_field)
 
