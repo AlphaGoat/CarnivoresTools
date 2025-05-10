@@ -107,3 +107,15 @@ class Map():
         grid_positions = np.stack([coords[:, 0], coords[:, 1], vis_height_map], axis=-1)
 
         return vis_objects, grid_positions
+
+    def get_object_world_coordinates(self, object: Object, grid_coords: np.ndarray):
+        """
+        Convert object coordinates to world coordinates
+        """
+        # Get coordinate matrix for points
+        pt_coords = np.zeros((object.num_points, 3), np.float32)
+        for i in range(object.num_points):
+            pt = object.points_sub_blocks[i] 
+            pt_coords[i, ...] = (pt.Pn_CoordY, pt.Pn_CoordX, pt.Pn_CoordZ)
+
+        # Get coordinate matrix for triangles

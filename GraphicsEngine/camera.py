@@ -46,9 +46,9 @@ class Camera():
         self.elevation = elevation
         self.render_distance = render_distance
 
-    def render(self, world):
+    def generate_visible_mesh(self, world):
         """
-        Render 3-D worldspace visible by camera
+        Generate mesh of objects that are visible
 
         :params:
             world (World): world object that defines
@@ -59,7 +59,12 @@ class Camera():
 
         # Retrieve textures and objects that are visible to our peon player
         textures, grid_positions = world.fetch_textures_based_on_coords(vis_coords) 
-#        objects = world.fetch_objects_based_on_coords(vis_coords)
+
+        # for each texture, define vertices and convert
+        # grid positions to coordinates in the camera
+        for tex, grid_pos in zip(textures, grid_positions):
+
+            pass
 
         pass
 
@@ -83,7 +88,7 @@ class Camera():
         return (x, y, z)
 
     @staticmethod
-    def get_bounds_of_view_furstrum(
+    def get_coordinates_in_solid_angle(
         elevation: float,
         azimuth: float,
         view_distance: int,
@@ -94,22 +99,13 @@ class Camera():
         angle (FOV projected from camera out on spherical
         view distance)
         """
-        # Get the height / width of the view window at the edge
-        # of the view distance
-        far_width = far_height = 2 * math.tan( math.radians(fov) / 2 ) * view_distance
+        # Get the edge coordinates at the furthest extent
+        # of the view distance in cartesian coordinates
+        theta0 = azimuth - (1/2) * fov
+        theta1 = azimuth + (1/2) * fov
 
-        # Get coordinates of the point at the center of the view
-        # window at the edge of the view distance
-        x = view_distance * math.sin( math.radians(90.0 - elevation) ) * \
-                math.cos( math.radians(azimuth) )
-        y = view_distance * math.sin( math.radians(90.0 - elevation) ) * \
-                math.sin( math.radians(azimuth) )
-        z = view_distance * math.cos( math.radians(90.0 - elevation) )
+        psi0 = 90.0 - elevation + (1/2) * fov
+        psi1 = 90.0 - elevation - (1/2) * fov
 
-        return (x, y, z), (far_width, far_height)
-
-    @staticmethod
-    def get_planes_composing_view_furstrum():
-        pass
-
+        x00 = 
 

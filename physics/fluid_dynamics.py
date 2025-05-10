@@ -126,7 +126,7 @@ if __name__ == "__main__":
         Y, X = np.meshgrid(y, x)
 
         U = vector_field[..., 0]
-        V = vector_field[..., 1]
+        V = vector_field[..., 2]
 
         ax.quiver(X, Y, U, V)
         ax.suptitle("Perlin Noise")

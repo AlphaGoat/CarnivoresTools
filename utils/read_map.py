@@ -15,6 +15,8 @@ from numpy.typing import NDArray
 from collections import OrderedDict
 from typing import List, Union, get_type_hints
 
+from .math import convert_uint16_to_bit_string
+
 BLOCK_LEN = 1024 * 1024
 SUB_BLOCK_LEN = 512 * 512
 
@@ -23,6 +25,12 @@ WORD = np.uint16
 SHORT = np.int16
 LONG = np.int32
 SINGLE = np.uint32
+
+
+def read_bytes_from_file(file_handle, num_bytes, dtype):
+    data = file_handle.read(num_bytes)
+    values = np.frombuffer(data, dtype)
+    return values
 
 
 class u16():
@@ -118,7 +126,7 @@ class RSCHeader():
             unknown_night_G=None,
             unknown_night_B=None,
         )
-        self._header_key_iter = self._internal_map.keys()
+        self._header_key_iter = iter(self._internal_map.keys())
         *_, self._last_key = self._internal_map.keys()
 
     def assign_next_header_val(self, val: np.int32):
@@ -160,6 +168,267 @@ class Texture():
             self.texture_array = self.texture_array.reshape(128, 128)
 
 
+#class Object():
+#    """
+#    Class that encapsulates a single object from an RSC file.
+#    Objects in RSC files consist of a variable number of
+#    points and triangles and a 256xN 16-bit map, where N is
+#    height of the bit map and is also variable.
+#    """
+#    def __init__(self):
+#        self.header = self.HeaderSubBlock()
+#        self.triangle_sub_blocks: List[self.TrianglesSubBlock] = []
+#        self.points_sub_blocks: List[self.PointsSubBlock] = []
+#        self.bones_sub_blocks: List[self.BonesSubBlock] = []
+#        self.texture_sub_block = self.TextureSubBlock()
+#
+#        # Attribute iterators for each sub-block type
+#        self._header_attr_iter = tee(iter(field for field in self.header.__ordered_attrs__ 
+#            if not (field.startswith("__") and field.endswith("__"))), 2)
+##        _, self.last_header_field = *[field for field in self.header.__ordered_attrs if not
+##                (field.starswith("__") and field.endswith("__"))]
+#        self._triangle_attr_iter = None
+#        self._points_attr_iter = None
+#        self._bones_attr_iter = None
+#
+#        # References to iterators, to be used to create N number of sub block
+#        # iterators when we know the number of sub blocks to instantiate
+#        self._triangle_attr_iter_ref = iter(field for field in self.TrianglesSubBlock().__ordered_attrs__ 
+#                if not (field.startswith("__") and field.endswith("__")))
+#        self._points_attr_iter_ref = iter(field for field in self.PointsSubBlock().__ordered_attrs__
+#                if not (field.startswith("__") and field.endswith("__")))
+#        self._bones_attr_iter_ref = iter(field for field in self.BonesSubBlock().__ordered_attrs__
+#                if not (field.startswith("__") and field.endswith("__")))
+#
+#        # Internal counters to let us know how many 
+#        # blocks of a certain type we have instantiated,
+#        # and how many we still need to fill
+#        self._triangle_block_counter = 0
+#        self._points_block_counter = 0
+#        self._bones_block_counter = 0
+#        self._texture_bytes_counter = 0
+#
+#    def assign_next_val(self, val):
+#        try:
+#            next_header_attr = next(self._header_attr_iter[0])
+#            setattr(self.header, next_header_attr, val)
+#            return
+#        except StopIteration:
+#            logging.info("All fields in object header sub-block have been assigned values")
+##            logging.info("Generating object iterators")
+#
+##            self.triangle_sub_blocks = [self.TrianglesSubBlock() for _ in range(self.header.num_triang)]
+##            self._triangle_attr_iter = tee(self._triangle_attr_iter_ref, 2 * (self.header.num_triang))
+##
+##            self.points_sub_blocks = [self.PointsSubBlock() for _ in range(self.header.num_points)]
+##            self._points_attr_iter = tee(self._points_attr_iter_ref, 3 * self.header.num_points)
+##
+##            self.bones_sub_blocks = [self.BonesSubBlock() for _ in range(self.header.num_bones)]
+##            self._bones_attr_iter = tee(self._bones_attr_iter_ref, 2 * self.header.num_bones)
+#
+#            logging.info("Moving onto triangles sub-block")
+#
+#        if self._triangle_block_counter < self.header.num_triang:
+#            next_triangle_attr = next(self._triangle_attr_iter[2 * self._triangle_block_counter])
+#            setattr(
+#                self.triangle_sub_blocks[2 * self._triangle_block_counter],
+#                next_triangle_attr,
+#                val
+#            )
+#            return
+#
+#        else:
+#            logging.info("All triangle sub-block fields have been assigned values.")
+#            logging.info("Moving onto points sub-blocks")
+#
+#        if self._points_block_counter < self.header.num_points:
+#            next_points_attr = next(self._points_attr_iter[2 * self._points_block_counter])
+#            setattr(
+#                self.points_sub_blocks[2 * self._points_block_counter],
+#                next_points_attr,
+#                val
+#            )
+#            return
+#
+#        else:
+#            logging.info("All points sub-block fields have been assigned values.")
+#            logging.info("Moving onto bones sub-blocks")
+#
+#        if self._bones_block_counter < self.header.num_bones:
+#            next_bones_attr = next(self._bones_attr_iter[2 * self._bones_block_counter])
+#            setattr(
+#                self.bones_sub_blocks[2 * self._bones_block_counter],
+#                next_bones_attr,
+#                val
+#            )
+#            return
+#
+#        else:
+#            logging.info("All bones sub-block fields have been assigned values.")
+#            logging.info("Moving onto texture sub-block")
+#
+#        if self.texture_sub_block.texture is None:
+#            self.texture_sub_block.texture = np.empty((self.header.long_tex, 256), dtype=np.uint8)
+#            
+#        if self._texture_bytes_counter < 256 * self.header.long_tex:
+#            row = self._texture_bytes_counter // 256
+#            col = self._texture_bytes_counter % 256
+#            self.texture_sub_block.texture[row][col] = val
+#            return
+#
+#        else:
+#            raise RuntimeError("This object has no more fields left to fill!")
+#
+#    def get_next_field_type(self):
+#        """
+#        Get the type for the next field that needs to be filled.
+#        """
+#        try:
+#            next_header_attr = next(self._header_attr_iter[1])
+#            header_type_hints = get_type_hints(self.HeaderSubBlock)
+#            return header_type_hints[next_header_attr]
+#        except StopIteration:
+#            pass
+#
+#        if not self.triangle_sub_blocks:
+#            self.triangle_sub_blocks = [self.TrianglesSubBlock() for _ in range(self.header.num_triang)]
+#
+#        if self._triangle_attr_iter is None:
+#            self._triangle_attr_iter = tee(self._triangle_attr_iter_ref, 2 * (self.header.num_triang))
+#
+#        try:
+#            next_triangle_attr = next(self._triangle_attr_iter[2 * self._triangle_block_counter + 1])
+#            triangle_type_hints = get_type_hints(self.TrianglesSubBlock)
+#            return triangle_type_hints[next_triangle_attr]
+#        except StopIteration:
+#            if self._triangle_block_counter < self.header.num_triang: self._triangle_block_counter += 1
+#            print("triangle block counter: ", self._triangle_block_counter)
+#            if self._triangle_block_counter < self.header.num_triang:
+#                next_triangle_attr = next(self._triangle_attr_iter[2 * self._triangle_block_counter + 1])
+#                triangle_type_hints = get_type_hints(self.TrianglesSubBlock)
+#                return triangle_type_hints[next_triangle_attr]
+#
+#        if not self.points_sub_blocks:
+#            self.points_sub_blocks = [self.PointsSubBlock() for _ in range(self.header.num_points)]
+#
+#        if self._points_attr_iter is None:
+#            self._points_attr_iter = tee(self._points_attr_iter_ref, 2 * self.header.num_points)
+#
+#        try:
+#            next_point_attr = next(self._points_attr_iter[2 * self._points_block_counter + 1])
+#            point_type_hints = get_type_hints(self.PointsSubBlock)
+#            return point_type_hints[next_point_attr]
+#        except StopIteration:
+#            if self._points_block_counter < self.header.num_points: self._points_block_counter += 1
+#            if self._points_block_counter < self.header.num_points:
+#                next_point_attr = next(self._points_attr_iter[2 * self._points_block_counter + 1])
+#                point_type_hints = get_type_hints(self.PointsSubBlock)
+#                return point_type_hints[next_point_attr]
+#
+##        if not self.bones_sub_blocks:
+##            self.bones_sub_blocks = [self.BonesSubBlock() for _ in range(self.header.num_bones)]
+##
+##        if self._bones_attr_iter is None:
+##            self._bones_attr_iter = tee(self._bones_attr_iter_ref, 2 * self.header.num_bones)
+#
+#        try:
+#            next_bone_attr = next(self._bones_attr_iter[2 * self._bones_block_counter + 1])
+#            bone_type_hints = get_type_hints(self.BonesSubBlock)
+#            return bone_type_hints[next_bone_attr]
+#        except StopIteration:
+#            if self._bones_block_counter < self.header.num_bones: self._bones_block_counter += 1
+#            if self._bones_block_counter < self.header.num_bones:
+#                next_bone_attr = next(self._bones_attr_iter[2 * self._bones_block_counter + 1])
+#                bone_type_hints = get_type_hints(self.BonesSubBlock)
+#                return bone_type_hints[next_bone_attr]
+#
+#        # Texture sub block has only one attribute of certain dtype
+#        if self._texture_bytes_counter < 256 * self.header.long_tex:
+#            return np.uint8
+#
+#        # When we are done, return Null to let reader know that
+#        # all fields in this object have been filled
+#        return None
+#
+#    def are_there_fields_without_assigned_values(self):
+#        # Check to see if all fields in the header 
+#        # have been assigned
+#        header_fields = [field for field in self.header.__definition_order__ 
+#                if not (field.startswith('__') and field.endswith('__'))]
+#        for field in header_fields:
+#            if getattr(self.header, field) is None:
+#                return True
+#
+#        # If the header field for the number of triangles is 
+#        # greater than zero, but no triangle sub blocks have
+#        # been instantiated, then 
+#        if self._triangle_block_counter < self.header.num_triang:
+##        if self.header.num_triang > 0 and len(self.triangle_sub_blocks) == 0:
+#            return True
+#
+#    class HeaderSubBlock(metaclass=OrderedClassMembers):
+#        Ob1: np.int32 = None
+#        Ob2: np.int32 = None
+#        Ob3: np.int32 = None
+#        Ob4: np.int32 = None
+#        Ob5: np.int32 = None
+#        Ob6: np.int32 = None
+#        Ob7: np.int32 = None
+#        Ob8: np.int32 = None
+#        Ob9: np.int32 = None
+#        Ob10: np.int32 = None
+#        Ob11: np.int32 = None
+#        Ob12: np.int32 = None
+#        Ob13: np.int32 = None
+#        Ob14: np.int32 = None
+#        Ob15: np.int32 = None
+#        Ob16: np.int32 = None
+#        num_points: np.int32 = None
+#        num_triang: np.int32 = None
+#        num_bones: np.int32 = None
+#        long_tex: np.int32 = None
+#        __definition_order__ = tuple(locals())
+#
+#    class TrianglesSubBlock(metaclass=OrderedClassMembers):
+#        Tn_Point1: np.int32 = None
+#        Tn_Point2: np.int32 = None
+#        Tn_Point3: np.int32 = None
+#        Tn_CoordX1: np.int32 = None
+#        Tn_CoordX2: np.int32 = None
+#        Tn_CoordX3: np.int32 = None
+#        Tn_CoordY1: np.int32 = None
+#        Tn_CoordY2: np.int32 = None
+#        Tn_CoordY3: np.int32 = None
+#        Tn_U1: np.int32 = None
+#        Tn_U2: np.int32 = None
+#        Tn_Parent: np.int32 = None
+#        Tn_U3: np.int32 = None
+#        Tn_U4: np.int32 = None
+#        Tn_U5: np.int32 = None
+#        Tn_U6: np.int32 = None
+#
+#    class PointsSubBlock(metaclass=OrderedClassMembers):
+#        Pn_CoordX: np.uint32 = None
+#        Pn_CoordY: np.uint32 = None
+#        Pn_CoordZ: np.uint32 = None
+#        Pn_bone: np.int32 = None
+#
+#    class BonesSubBlock(metaclass=OrderedClassMembers):
+#        bone1_name: str = None
+#        bone1_X: np.uint32 = None
+#        bone1_Y: np.uint32 = None
+#        bone1_Z: np.uint32 = None
+#        bone1_parent: np.int16 = None
+#        bone1_unknown: np.int16 = None
+#        bone2_X: np.uint32 = None
+#        bone2_Y: np.uint32 = None
+#        bone2_Z: np.uint32 = None
+#        bone2_parent: np.int16 = None
+#        bone2_unknown: np.int16 = None
+#
+#    class TextureSubBlock():
+#        texture: NDArray[np.uint8] = None
+
 class Object():
     """
     Class that encapsulates a single object from an RSC file.
@@ -173,165 +442,159 @@ class Object():
         self.points_sub_blocks: List[self.PointsSubBlock] = []
         self.bones_sub_blocks: List[self.BonesSubBlock] = []
         self.texture_sub_block = self.TextureSubBlock()
+        self.sprite_sub_block = self.SpriteSubBlock()
 
-        # Attribute iterators for each sub-block type
-        self._header_attr_iter = tee(iter(self.header.__ordered_attrs__), 2)
-        self._triangle_attr_iter = None
-        self._points_attr_iter = None
-        self._bones_attr_iter = None
-
-        # References to iterators, to be used to create N number of sub block
-        # iterators when we know the number of sub blocks to instantiate
-        self._triangle_attr_iter_ref = iter(self.TrianglesSubBlock().__ordered_attrs__)
-        self._points_attr_iter_ref = iter(self.PointsSubBlock().__ordered_attrs__)
-        self._bones_attr_iter_ref = iter(self.BonesSubBlock().__ordered_attrs__)
-
-        # Internal counters to let us know how many 
-        # blocks of a certain type we have instantiated,
-        # and how many we still need to fill
+        # Internal counters to let us know how many blocks of a certain
+        # type we have instantiated
         self._triangle_block_counter = 0
         self._points_block_counter = 0
         self._bones_block_counter = 0
         self._texture_bytes_counter = 0
 
-    def assign_next_val(self, val):
-        try:
-            next_header_attr = next(self._header_attr_iter[0])
-            setattr(self.header, next_header_attr, val)
-            return
-        except StopIteration:
-            logging.info("All fields in object header sub-block have been assigned values")
-            logging.info("Moving onto triangles sub-block")
-
-        if self._triangle_block_counter < self.header.num_triang:
-            next_triangle_attr = next(self._triangle_attr_iter[2 * self._triangle_block_counter])
-            setattr(
-                self.triangle_sub_blocks[2 * self._triangle_block_counter],
-                next_triangle_attr,
-                val
-            )
-
-        else:
-            logging.info("All triangle sub-block fields have been assigned values.")
-            logging.info("Moving onto points sub-blocks")
-
-        if self._points_block_counter < self.header.num_points:
-            next_points_attr = next(self._points_attr_iter[2 * self._points_block_counter])
-            setattr(
-                self.points_sub_blocks[2 * self._points_block_counter],
-                next_points_attr,
-                val
-            )
-
-        else:
-            logging.info("All points sub-block fields have been assigned values.")
-            logging.info("Moving onto bones sub-blocks")
-
-        if self._bones_block_counter < self.header.num_bones:
-            next_bones_attr = next(self._bones_attr_iter[2 * self._bones_block_counter])
-            setattr(
-                self.bones_sub_blocks[2 * self._bones_block_counter],
-                next_bones_attr,
-                val
-            )
-
-        else:
-            logging.info("All bones sub-block fields have been assigned values.")
-            logging.info("Moving onto texture sub-block")
-
-        if self.texture_sub_block.texture is None:
-            self.texture_sub_block.texture = np.empty((self.header.long_tex, 256), dtype=np.uint8)
-            
-        if self._texture_bytes_counter < 256 * self.header.long_tex:
-            row = self._texture_bytes_counter // 256
-            col = self._texture_bytes_counter % 256
-            self.texture_sub_block.texture[row][col] = val
-        else:
-            raise RuntimeError("This object has no more fields left to fill!")
-
     def get_next_field_type(self):
         """
-        Get the type for the next field that needs to be filled.
+        Get the type for the next field that needs to be assigned a value
         """
-        try:
-            next_header_attr = next(self._header_attr_iter[1])
-            header_type_hints = get_type_hints(self.HeaderSubBlock)
-            return header_type_hints[next_header_attr]
-        except StopIteration:
-            pass
+        header_fields = self._get_ordered_fields(self.header)
+        for field in header_fields:
+            if getattr(self.header, field) is None:
+                return get_type_hints(self.HeaderSubBlock)[field]
 
-        if not self.triangle_sub_blocks:
-            self.triangle_sub_blocks = [self.TrianglesSubBlock() for _ in self.num_triangle_blocks]
+        for idx in range(self.header.num_triang):
+            triangle_fields = self._get_ordered_fields(self.triangle_sub_blocks[idx])
+            for field in triangle_fields:
+                if getattr(self.triangle_sub_blocks[idx], field) is None:
+                    return get_type_hints(self.TrianglesSubBlock)[field]
 
-        if self._triangle_attr_iter is None:
-            self._triangle_attr_iter = tee(self._triangle_attr_iter_ref, 2 * self.num_triangle_blocks)
+        for idx in range(self.header.num_points):
+            points_fields = self._get_ordered_fields(self.points_sub_blocks[idx])
+            for field in points_fields:
+                if getattr(self.points_sub_blocks[idx], field) is None:
+                    return get_type_hints(self.PointsSubBlock)[field]
 
-        try:
-            next_triangle_attr = next(self._triangle_attr_iter[2 * self._triangle_block_counter + 1])
-            triangle_type_hints = get_type_hints(self.TrianglesSubBlock)
-            return triangle_type_hints[next_triangle_attr]
-        except StopIteration:
-            if self._triangle_block_counter < self.header.num_triang: self._triangle_block_counter += 1
-            if self._triangle_block_counter < self.header.num_triang:
-                next_triangle_attr = next(self._triangle_attr_iter[2 * self._triangle_block_counter + 1])
-                triangle_type_hints = get_type_hints(self.TrianglesSubBlock)
-                return triangle_type_hints[next_triangle_attr]
+        for idx in range(self.header.num_bones):
+            bones_fields = self._get_ordered_fields(self.bones_sub_blocks[idx])
+            for field in bones_fields:
+                if getattr(self.bones_sub_blocks[idx], field) is None:
+                    return get_type_hints(self.BonesSubBlock)[field]
 
-        if not self.points_sub_blocks:
-            self.points_sub_blocks = [self.PointsSubBlock() for _ in range(self.header.num_points)]
+        if self.texture_sub_block.texture is None:
+            return (get_type_hints(self.TextureSubBlock)['texture'], self.header.long_tex, np.uint8)
 
-        if self._points_attr_iter is None:
-            self._points_attr_iter = tee(self._points_attr_iter_ref, 2 * self.header.num_points)
+        if self.sprite_sub_block.sprite_bmp is None:
+            return (get_type_hints(self.SpriteSubBlock)['sprite_bmp'], 2 * 128 * 128, np.uint16)
 
-        try:
-            next_point_attr = next(self._points_attr_iter[2 * self._points_block_counter + 1])
-            point_type_hints = get_type_hints(self.PointsSubBlock)
-            return point_type_hints[next_point_attr]
-        except StopIteration:
-            if self._points_block_counter < self.header.num_points: self._points_block_counter += 1
-            if self._points_block_counter < self.header.num_points:
-                next_point_attr = next(self._points_attr_iter[2 * self._points_block_counter + 1])
-                point_type_hints = get_type_hints(self.PointsSubBlock)
-                return point_type_hints[next_point_attr]
-
-        if not self.bones_sub_blocks:
-            self.bones_sub_blocks = [self.BonesSubBlock() for _ in range(self.header.num_bones)]
-
-        if self._bones_attr_iter is None:
-            self._bones_attr_iter = tee(self._bones_attr_iter_ref, 2 * self.header.num_bones)
-
-        try:
-            next_bone_attr = next(self._bones_attr_iter[2 * self._bones_block_counter + 1])
-            bone_type_hints = get_type_hints(self.BonesSubBlock)
-            return bone_type_hints[next_bone_attr]
-        except StopIteration:
-            if self._bones_block_counter < self.header.num_bones: self._bones_block_counter += 1
-            if self._bones_block_counter < self.header.num_bones:
-                next_bone_attr = next(self._bones_attr_iter[2 * self._bones_block_counter + 1])
-                bone_type_hints = get_type_hints(self.BonesSubBlock)
-                return bone_type_hints[next_bone_attr]
-
-        # Texture sub block has only one attribute of certain dtype
-        if self._texture_bytes_counter < 256 * self.header.long_tex:
-            return np.uint8
-
-        # When we are done, return Null to let reader know that
-        # all fields in this object have been filled
+        # If we have filled all values already, return None and have user
+        # handler error downstream
         return None
 
-    def are_there_fields_without_assigned_values(self):
-        # Check to see if all fields in the header 
-        # have been assigned
-        header_fields = vars(self.header)
-        for field in header_fields.keys():
-            if header_fields[field] is None:
+    def assign_next_value(self, value):
+        header_fields = self._get_ordered_fields(self.header)
+        for field in header_fields:
+            if getattr(self.header, field) is None:
+                setattr(self.header, field, value)
+
+                # We'll want to instantiate some of the sub block lists
+                # when given the appropriate header field
+                if field == "num_triang":
+                    self.triangle_sub_blocks = [self.TrianglesSubBlock() for _ in
+                            range(self.header.num_triang)]
+                elif field == "num_points":
+                    self.points_sub_blocks = [self.PointsSubBlock() for _ in
+                            range(self.header.num_points)]
+                elif field == "num_bones":
+                    self.bones_sub_blocks = [self.BonesSubBlock() for _ in
+                            range(self.header.num_bones)]
+#                elif field == "long_tex":
+#                    self.texture_sub_block.texture = np.empty((self.header.long_tex, 256),
+#                            dtype=np.uint8)
+                return
+
+        for idx in range(self.header.num_triang):
+            triangle_fields = self._get_ordered_fields(self.triangle_sub_blocks[idx])
+            for field in triangle_fields:
+                if getattr(self.triangle_sub_blocks[idx], field) is None:
+                    setattr(self.triangle_sub_blocks[idx], field, value)
+                    return
+
+        for idx in range(self.header.num_points):
+            points_fields = self._get_ordered_fields(self.points_sub_blocks[idx])
+            for field in points_fields:
+                if getattr(self.points_sub_blocks[idx], field) is None:
+                    setattr(self.points_sub_blocks[idx], field, value)
+                    return
+
+        for idx in range(self.header.num_bones):
+            bones_fields = self._get_ordered_fields(self.bones_sub_blocks[idx])
+            for field in bones_fields:
+                if getattr(self.bones_sub_blocks[idx], field) is None:
+                    setattr(self.bones_sub_blocks[idx], field, value)
+                    return
+
+        if self.texture_sub_block.texture is None:
+            self.texture_sub_block.texture = np.reshape(value, (self.header.long_tex // 256, 256))
+
+            return
+
+        # If all of these values have been filled, the last
+        # thing to fill is the sprite array itself
+        if self.sprite_sub_block.sprite_bmp is None:
+            self.sprite_sub_block.sprite_bmp = np.reshape(value, (128, 128))
+            return
+
+        raise RuntimeError("No more fields left to assign values to")
+
+    def is_there_a_field_without_an_assigned_value(self):
+        """
+        Checks fields in object class to see if there
+        are still fields that have not been assigned a
+        value yet
+        """
+        # First check the header block
+        header_fields = self._get_ordered_fields(self.header)
+        for field in header_fields:
+            if getattr(self.header, field) is None:
                 return True
 
-        # If the header field for the number of triangles is 
-        # greater than zero, but no triangle sub blocks have
-        # been instantiated, then 
-        if self.header.num_triang > 0 and len(self.triangle_sub_blocks) == 0:
+        # Now check all of the triangle blocks to see if there
+        # is still a field in one of them that needs an assigned value
+        for idx in range(self.header.num_triang):
+            triangle_fields = self._get_ordered_fields(self.triangle_sub_blocks[idx])
+            for field in triangle_fields:
+                if getattr(self.triangle_sub_blocks[idx], field) is None:
+                    return True
+
+        # Check all of the points blocks
+        for idx in range(self.header.num_points):
+            points_fields = self._get_ordered_fields(self.points_sub_blocks[idx])
+            for field in points_fields:
+                if getattr(self.points_sub_blocks[idx], field) is None:
+                    return True
+
+        # check the bones sub blocks
+        for idx in range(self.header.num_bones):
+            bones_fields = self._get_ordered_fields(self.bones_sub_blocks[idx])
+            for field in bones_fields:
+                if getattr(self.bones_sub_blocks[idx], field) is None:
+                    return True
+
+        # check the texture sub block
+        if self.texture_sub_block.texture is None:
             return True
+
+        # Finally, check the sprite sub block
+        if self.sprite_sub_block.sprite_bmp is None:
+            return True
+
+        return False
+
+    @staticmethod
+    def _get_ordered_fields(ordered_class_object):
+#        if type(ordered_class_object) != OrderedClassMembers:
+#            raise ValueError("Need to be provided an object with metaclass `OrderedClassMembers`." 
+#                             + f" Was given a class of type {type(ordered_class_object)}")
+        return [attr for attr in ordered_class_object.__ordered_attrs__ if not
+                (attr.startswith("__") and attr.endswith("__"))]
 
     class HeaderSubBlock(metaclass=OrderedClassMembers):
         Ob1: np.int32 = None
@@ -354,6 +617,7 @@ class Object():
         num_triang: np.int32 = None
         num_bones: np.int32 = None
         long_tex: np.int32 = None
+        __definition_order__ = tuple(locals())
 
     class TrianglesSubBlock(metaclass=OrderedClassMembers):
         Tn_Point1: np.int32 = None
@@ -386,57 +650,28 @@ class Object():
         bone1_Z: np.uint32 = None
         bone1_parent: np.int16 = None
         bone1_unknown: np.int16 = None
-        bone2_X: np.uint32 = None
-        bone2_Y: np.uint32 = None
-        bone2_Z: np.uint32 = None
-        bone2_parent: np.int16 = None
-        bone2_unknown: np.int16 = None
+#        bone2_X: np.uint32 = None
+#        bone2_Y: np.uint32 = None
+#        bone2_Z: np.uint32 = None
+#        bone2_parent: np.int16 = None
+#        bone2_unknown: np.int16 = None
 
     class TextureSubBlock():
         texture: NDArray[np.uint8] = None
 
+    class SpriteSubBlock():
+        sprite_bmp: NDArray[np.uint8] = None
+
 
 class SkyBlock():
-    sky_bmp: NDArray[BYTE] = None
+    dawn_sky_bmp: NDArray[WORD] = None
+    day_sky_bmp: NDArray[WORD] = None
+    night_sky_bmp: NDArray[WORD] = None
     clouds_bmp: NDArray[BYTE] = None
 
 
 class FogBlock():
     num_fogs: LONG = None
-
-    def __init__(self):
-        self.fog_sections: List[self.FogSection] = []
-
-        # Counter to keep track of which fog section
-        # we are on
-        self._fog_section_counter = 0
-
-        # fog section attribute iterator
-        self._fog_section_attr_iter = None
-
-    def get_next_field_type(self):
-        if self.num_fogs is None:
-            return LONG
-        self._fog_section_attr_iter = tee(iter(self.FogSection().__ordered_attrs__), 2)
-        pass
-
-    def are_there_fields_without_assigned_values(self):
-        if self.num_fogs is None:
-            return True
-
-        # If the header field for the number of triangles is 
-        # greater than zero, but no triangle sub blocks have
-        # been instantiated, then 
-        if self.num_fogs > 0 and len(self.fog_sections) == 0:
-            return True
-
-        for section in self.fog_sections:
-            section_vars = vars(section)
-            for field in section_vars.keys():
-                if section_vars[field] == None:
-                    return True
-
-        return False
 
     class FogSection(metaclass=OrderedClassMembers):
         fog_RGBA: NDArray[BYTE] = None
@@ -445,6 +680,43 @@ class FogBlock():
         fog_dist: SINGLE = None
         fog_dens: SINGLE = None
 
+    fog_sections: List[FogSection] = []
+
+
+class SoundsBlock():
+    num_random_sounds: LONG = None
+    num_ambient_sounds: LONG = None
+    num_u_random_sounds: LONG = None
+    u_random_sounds_unknown: LONG = None
+
+    class RandomSoundSection(metaclass=OrderedClassMembers):
+        length_random: LONG = None
+        random_data: NDArray[BYTE] = None
+
+    class AmbientSoundSection(metaclass=OrderedClassMembers):
+        length_ambient: LONG = None
+        ambient_data: NDArray[BYTE] = None
+
+    class UnknownSoundSection(metaclass=OrderedClassMembers):
+        u_random_index: LONG = None
+        u_random_unknown1: LONG = None
+        u_random_unknown2: LONG = None
+        u_random_unknown3: LONG = None
+
+    random_sound_sections: List[RandomSoundSection] = []
+    ambient_sound_sections: List[AmbientSoundSection] = []
+    unknown_sound_sections: List[UnknownSoundSection] = []
+
+
+class WaterBlock():
+    num_water: LONG = None
+
+    class WaterSection():
+        water_texture: LONG = None
+        water_lvl: LONG = None
+        water_opac: SINGLE = None
+
+    water_sections: List[WaterSection] = []
 
 
 class RSCReader():
@@ -454,16 +726,29 @@ class RSCReader():
         self.textures = []
         self.objects = []
         self.skyblock = SkyBlock()
+        self.fogblock = FogBlock()
+        self.soundsblock = SoundsBlock()
+        self.waterblock = WaterBlock()
 
     def __enter__(self):
         self.file = open(self.file_path, 'rb')
+        print("Reading header...")
         self._read_header()
+        print("Done. Parsing textures...")
         self._parse_textures()
+        print("Done. Parsing objects...")
         self._parse_objects()
-        self._parse_sky_block()
-        self._parse_fog_block()
+#        print("Done. Parsing sky block...")
+#        self._parse_sky_block()
+#        print("Done. Parsing fog block...")
+#        self._parse_fog_block()
+#        print("Done. Parsing sounds block...")
+#        self._parse_sounds_block()
+#        print("Done. Parsing water block...")
+#        self._parse_water_block()
+        return self
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
     def _read_header(self):
@@ -471,64 +756,201 @@ class RSCReader():
         # which populates 20 long data structures
         for _ in range(20):
             data = self.file.read(4)
-            val = np.frombuffer(data, 'int32')
+#            val = np.frombuffer(data, 'int32')[0]
+            val = np.frombuffer(data, '<i4')[0]
             self.header.assign_next_header_val(val)
 
     def _parse_textures(self):
         num_textures = self.header.num_textures
         for _ in range(num_textures):
-            texture_array = []
-            for _ in range(128 * 128):
-                data = self.file.read(2)
-                val = np.frombuffer(data, 'uint16')
-                texture_array.append(val)
-            self.textures.append(Texture(np.array(
-                texture_array, dtype=np.int16).reshape(128, 128)))
+#            texture_array = []
+#            for _ in range(128 * 128):
+#                data = self.file.read(2)
+#                val = np.frombuffer(data, 'uint16')
+#                texture_array.append(val)
+            data = self.file.read(2 * 128 * 128)
+#            texture_array = np.frombuffer(data, 'uint16').reshape((128, 128))
+            texture_array = np.frombuffer(data, '<u2').reshape((128, 128))
+            self.textures.append(Texture(texture_array))
+
 
     def _parse_objects(self):
         num_objects = self.header.num_objects
         for _ in range(num_objects):
             obj = Object()
-            while obj.are_there_fields_without_assigned_values():
+
+            # Fill in header information
+
+    def _parse_objects(self):
+        num_objects = self.header.num_objects
+        for _ in range(num_objects):
+            obj = Object()
+            while obj.is_there_a_field_without_an_assigned_value():
                 # Get the data type for the next field
                 # in this object
                 field_type = obj.get_next_field_type()
-                if field_type == np.uint8:
-                    data = self.file.read(1)
-                    val = np.frombuffer(data, 'uint8')
-                elif field_type == np.uint16:
-                    data = self.file.read(2)
-                    val = np.frombuffer(data, 'uint16')
-                elif field_type == np.int16:
-                    data = self.file.read(2)
-                    val = np.frombuffer(data, 'int16')
-                elif field_type == np.int32:
-                    data = self.file.read(4)
-                    val = np.frombuffer(data, 'int32')
-                elif field_type == np.uint32:
-                    data = self.file.read(4)
-                    val = np.frombuffer(data, 'uint32')
-                elif field_type == str:
-                    data = self.file.read(32)
-                    val = data.decode('ascii')
-                elif field_type == NDArray:
-                    data = self.file.read(1)
-                    val = np.frombuffer(data, 'uint8')
 
-                obj.assign_next_val(val)
+                if not isinstance(field_type, tuple):
+                    if field_type == np.uint8:
+                        data = self.file.read(1)
+#                        val = np.frombuffer(data, 'uint8')[0]
+                        val = np.frombuffer(data, '<u1')[0]
+                    elif field_type == np.uint16:
+                        data = self.file.read(2)
+#                        val = np.frombuffer(data, 'uint16')[0]
+                        val = np.frombuffer(data, '<u2')[0]
+                    elif field_type == np.int16:
+                        data = self.file.read(2)
+#                        val = np.frombuffer(data, 'int16')[0]
+                        val = np.frombuffer(data, '<i2')[0]
+                    elif field_type == np.int32:
+                        data = self.file.read(4)
+#                        val = np.frombuffer(data, 'int32')[0]
+                        val = np.frombuffer(data, '<i4')[0]
+                    elif field_type == np.uint32:
+                        data = self.file.read(4)
+#                        val = np.frombuffer(data, 'uint32')[0]
+                        val = np.frombuffer(data, '<u4')[0]
+                    elif field_type == str:
+                        data = self.file.read(32)
+                        val = data.decode('ascii', "replace")
+    #                    val = unicode(data, errors='replace')
+#                    elif field_type == NDArray:
+#                        data = self.file.read(1)
+#                        val = np.frombuffer(data, 'uint8')
+                else:
+                    _, num_bytes, dtype = field_type
+                    data = self.file.read(num_bytes)
+                    if dtype == np.uint8:
+#                        val = np.frombuffer(data, 'uint8')
+                        val = np.frombuffer(data, '<u1')
+                    elif dtype == np.uint16:
+#                        val = np.frombuffer(data, 'uint16')
+                        val = np.frombuffer(data, '<u2')
+
+                obj.assign_next_value(val)
             self.objects.append(obj)
 
     def _parse_sky_block(self):
-        sky_map_data = self.file.read(256 * 256 * 2)
-        sky_map_array = np.frombuffer(sky_map_data, 'uint16')
-        self.skyblock.sky_bmp = sky_map_array
+        dawn_sky_map = read_bytes_from_file(self.file, 256 * 256 * 2, '<u2')
+        self.skyblock.dawn_sky_bmp = dawn_sky_map.reshape(256, 256)
 
-        cloud_map_data = self.file.read(128 * 128 * 1)
-        cloud_map_array = np.frombuffer(cloud_map_data, 'uint8')
-        self.skyblock.cloud_bmp = cloud_map_array
+        day_sky_map = read_bytes_from_file(self.file, 256 * 256 * 2, '<u2')
+        self.skyblock.day_sky_bmp = day_sky_map.reshape(256, 256)
+
+        night_sky_map = read_bytes_from_file(self.file, 256 * 256 * 2, '<u2')
+        self.skyblock.night_sky_bmp = night_sky_map.reshape(256, 256)
+
+        clouds_map = read_bytes_from_file(self.file, 128 * 128, '<u1')
+        self.skyblock.clouds_bmp = clouds_map.reshape(128, 128)
 
     def _parse_fog_block(self):
-        pass
+        # Get the number of fog sections to parse
+        num_fogs = read_bytes_from_file(self.file, 4, '<i4')[0]
+        self.fogblock.num_fogs = num_fogs
+        print("num_fogs: ", num_fogs)
+
+        for _ in range(num_fogs):
+            # Initialize a new fog section
+            fog_section = self.fogblock.FogSection()
+
+            # Read in data for that section
+            fog_RGBA = read_bytes_from_file(self.file, 4, '<u1')
+            fog_section.fog_RGBA = fog_RGBA
+
+            fog_alt = read_bytes_from_file(self.file, 4, 'f')[0]
+            fog_section.fog_alt = fog_alt
+
+            fog_poison = read_bytes_from_file(self.file, 4, '<i4')[0]
+            fog_section.fog_poison = fog_poison
+
+            fog_dist = read_bytes_from_file(self.file, 4, 'f')[0]
+            fog_section.fog_dist = fog_dist
+
+            fog_dens = read_bytes_from_file(self.file, 4, 'f')[0]
+            fog_section.fog_dens = fog_dens
+
+            # Add section to the internal fog block object
+            self.fogblock.fog_sections.append(fog_section)
+
+    def _parse_sounds_block(self):
+        # Get the number of random sounds
+        num_random_sounds = read_bytes_from_file(self.file, 4, '<i4')[0]
+        self.soundsblock.num_random_sounds = num_random_sounds
+
+        print("num_random_sounds: ", num_random_sounds)
+        for _ in range(num_random_sounds):
+            # initialize new random sound section
+            random_sound_section = self.soundsblock.RandomSoundSection()
+
+            # Read in data for that section
+            length_random = read_bytes_from_file(self.file, 4, '<i4')[0]
+            random_sound_section.length_random = length_random
+
+            random_data = read_bytes_from_file(self.file, length_random, '<u1')[0]
+            random_sound_section.random_data = random_data
+
+            self.soundsblock.random_sound_sections.append(random_sound_section)
+
+        # Get the number of ambient sounds
+        print("num_ambient_sounds: ", num_random_sounds)
+        num_ambient_sounds = read_bytes_from_file(self.file, 4, '<i4')[0]
+        self.soundsblock.num_ambient_sounds = num_ambient_sounds
+
+        for _ in range(num_ambient_sounds):
+            # Initialize new ambient sound section
+            ambient_sound_section = self.soundsblock.AmbientSoundSection()
+
+            # Read in data for that section
+            length_ambient = read_bytes_from_file(self.file, 4, '<i4')[0]
+            ambient_sound_section.length_ambient = length_ambient
+            import pdb; pdb.set_trace()
+
+            ambient_data = read_bytes_from_file(self.file, length_ambient, '<u1')[0]
+            ambient_sound_section.ambient_data = ambient_data
+
+            self.soundsblock.ambient_sound_sections.append(ambient_sound_section)
+
+        for _ in range(16):
+            unknown_sound_section = self.soundsblock.UnknownSoundSection()
+
+            u_random_index = read_bytes_from_file(self.file, 4, '<i4')[0]
+            unknown_sound_section.u_random_index = u_random_index
+
+            u_random_unknown1 = read_bytes_from_file(self.file, 4, '<i4')[0]
+            unknown_sound_section.u_random_unknown1 = u_random_unknown1
+
+            u_random_unknown2 = read_bytes_from_file(self.file, 4, '<i4')[0]
+            unknown_sound_section.u_random_unknown2 = u_random_unknown2
+
+            u_random_unknown3 = read_bytes_from_file(self.file, 4, '<i4')[0]
+            unknown_sound_section.u_random_unknown3 = u_random_unknown3
+
+        num_u_random_sounds = read_bytes_from_file(self.file, 4, '<i4')[0]
+        self.soundsblock.num_u_random_sounds = num_u_random_sounds
+
+        u_random_sounds_unknown = read_bytes_from_file(self.file, 4, '<i4')[0]
+        self.soundsblock.u_random_sounds_unknown = u_random_sounds_unknown
+
+    def _parse_water_block(self):
+        # Get the number of water textures
+        num_water = read_bytes_from_file(self.file, 4, '<i4')[0]
+        self.waterblock.num_water = num_water
+
+        for _ in range(num_water):
+            water_section = self.waterblock.WaterSection()
+
+            water_texture = read_bytes_from_file(self.file, 4, '<i4')[0]
+            water_section.water_texture = water_texture
+
+            water_lvl = read_bytes_from_file(self.file, 4, '<i4')[0]
+            water_section.water_lvl = water_lvl
+
+            water_opac = read_bytes_from_file(self.file, 4, '<i4')[0]
+            water_section.water_opac = water_opac
+
+            water_unknown = read_bytes_from_file(self.file, 4, '<i4')[0]
+            water_section.water_unknown = water_unknown
 
     def get_header(self):
         return self.header
@@ -541,6 +963,15 @@ class RSCReader():
 
     def get_skyblock(self):
         return self.skyblock
+
+    def get_fogblock(self):
+        return self.fogblock
+
+    def get_soundsblock(self):
+        return self.soundsblock
+
+    def get_waterblock(self):
+        return self.waterblock
 
 
 class MAP():
@@ -658,7 +1089,7 @@ class MAP():
 
         # Convert to bit string representation for each value
         # in array
-        bit_string = np.unpackbits(value.view(np.uint8))
+        bit_string = convert_uint16_to_bit_string(value.view(np.uint8))
         self._FMap = np.reshape(bit_string, (1024, 1024, 16))
 
     def _del_fmap(self):
@@ -811,7 +1242,6 @@ class MAP():
 class MAPReader():
     def __init__(self, file_path: Union[str, Path]):
         self.file_path = file_path
-        self.ptr = PtrU8()
         self.MAP = MAP()
 
     def __enter__(self):
@@ -898,7 +1328,6 @@ def read_map_file(file_path):
 
     # 16-bit conversion
     ptr = ptr * u16()
-    import pdb; pdb.set_trace()
     TMap1 = map_array_u16[ptr: ptr + BLOCK_LEN]
     ptr += BLOCK_LEN
     TMap2 = map_array_u16[ptr: ptr + BLOCK_LEN]
@@ -930,7 +1359,6 @@ def read_map_file(file_path):
     ptr += SUB_BLOCK_LEN
     AmbMap = map_array_u8[ptr: ptr + SUB_BLOCK_LEN]
 
-    import pdb; pdb.set_trace()
 
 
 def read_rsc_file(file_path):
