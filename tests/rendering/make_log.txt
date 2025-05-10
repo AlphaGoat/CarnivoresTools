@@ -1,0 +1,278 @@
+g++ -c -o render_2.o render_2.cpp -I/usr/X12R6/include -I/usr/include/lua5.1
+render_2.cpp: In function ‘void update_dino_render_program()’:
+render_2.cpp:176:9: error: ‘enact_dino_render_program’ was not declared in this scope
+         enact_dino_render_program(vertex_shader, fragment_shader, program);
+         ^~~~~~~~~~~~~~~~~~~~~~~~~
+render_2.cpp:176:9: note: suggested alternative: ‘make_dino_render_program’
+         enact_dino_render_program(vertex_shader, fragment_shader, program);
+         ^~~~~~~~~~~~~~~~~~~~~~~~~
+         make_dino_render_program
+render_2.cpp: In function ‘int make_resources()’:
+render_2.cpp:185:53: error: ‘struct<unnamed>’ has no member named ‘dino’
+     if (!fetch_resources_from_car_file(&g_resources.dino))
+                                                     ^~~~
+render_2.cpp:185:10: error: ‘fetch_resources_from_car_file’ was not declared in this scope
+     if (!fetch_resources_from_car_file(&g_resources.dino))
+          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+render_2.cpp:188:21: error: ‘struct<unnamed>’ has no member named ‘dino’
+     if (g_resources.dino.texture == 0)
+                     ^~~~
+render_2.cpp:194:5: error: ‘enact_dino_render_program’ was not declared in this scope
+     enact_dino_render_program(vertex_shader, fragment_shader, program);
+     ^~~~~~~~~~~~~~~~~~~~~~~~~
+render_2.cpp:194:5: note: suggested alternative: ‘make_dino_render_program’
+     enact_dino_render_program(vertex_shader, fragment_shader, program);
+     ^~~~~~~~~~~~~~~~~~~~~~~~~
+     make_dino_render_program
+render_2.cpp: In function ‘int fetch_resources_from_car_file(dino_mesh*)’:
+render_2.cpp:221:17: error: ‘err’ was not declared in this scope
+         sprintf(err, errlen, "Could not load car_reader module.");
+                 ^~~
+render_2.cpp:221:17: note: suggested alternative: ‘erf’
+         sprintf(err, errlen, "Could not load car_reader module.");
+                 ^~~
+                 erf
+render_2.cpp:221:22: error: ‘errlen’ was not declared in this scope
+         sprintf(err, errlen, "Could not load car_reader module.");
+                      ^~~~~~
+render_2.cpp:221:22: note: suggested alternative: ‘mblen’
+         sprintf(err, errlen, "Could not load car_reader module.");
+                      ^~~~~~
+                      mblen
+render_2.cpp:231:18: error: ‘err’ was not declared in this scope
+         snprintf(err, errlen, "New not a valid function");
+                  ^~~
+render_2.cpp:231:18: note: suggested alternative: ‘erf’
+         snprintf(err, errlen, "New not a valid function");
+                  ^~~
+                  erf
+render_2.cpp:231:23: error: ‘errlen’ was not declared in this scope
+         snprintf(err, errlen, "New not a valid function");
+                       ^~~~~~
+render_2.cpp:231:23: note: suggested alternative: ‘mblen’
+         snprintf(err, errlen, "New not a valid function");
+                       ^~~~~~
+                       mblen
+render_2.cpp:242:35: error: too many arguments to function ‘void lua_pushstring(lua_State*, const char*)’
+     lua_pushstring(L, filepath, 85);
+                                   ^
+In file included from render_2.cpp:6:0:
+/usr/include/lua5.1/lua.h:164:16: note: declared here
+ LUA_API void  (lua_pushstring) (lua_State *L, const char *s);
+                ^~~~~~~~~~~~~~
+render_2.cpp:246:18: error: ‘err’ was not declared in this scope
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                  ^~~
+render_2.cpp:246:18: note: suggested alternative: ‘erf’
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                  ^~~
+                  erf
+render_2.cpp:246:23: error: ‘errlen’ was not declared in this scope
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                       ^~~~~~
+render_2.cpp:246:23: note: suggested alternative: ‘mblen’
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                       ^~~~~~
+                       mblen
+render_2.cpp:256:18: error: ‘err’ was not declared in this scope
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                  ^~~
+render_2.cpp:256:18: note: suggested alternative: ‘erf’
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                  ^~~
+                  erf
+render_2.cpp:256:23: error: ‘errlen’ was not declared in this scope
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                       ^~~~~~
+render_2.cpp:256:23: note: suggested alternative: ‘mblen’
+         snprintf(err, errlen, "%s", lua_tostring(L, -1));
+                       ^~~~~~
+                       mblen
+render_2.cpp:267:17: error: ‘err’ was not declared in this scope
+         sprintf(err, errlen, "Invalid type (%d) returned by new", lua_type(L, -1));
+                 ^~~
+render_2.cpp:267:17: note: suggested alternative: ‘erf’
+         sprintf(err, errlen, "Invalid type (%d) returned by new", lua_type(L, -1));
+                 ^~~
+                 erf
+render_2.cpp:267:22: error: ‘errlen’ was not declared in this scope
+         sprintf(err, errlen, "Invalid type (%d) returned by new", lua_type(L, -1));
+                      ^~~~~~
+render_2.cpp:267:22: note: suggested alternative: ‘mblen’
+         sprintf(err, errlen, "Invalid type (%d) returned by new", lua_type(L, -1));
+                      ^~~~~~
+                      mblen
+render_2.cpp:300:31: error: ‘lua_len’ was not declared in this scope
+     size_t len_vertex_table = lua_len(L, -1);
+                               ^~~~~~~
+render_2.cpp:300:31: note: suggested alternative: ‘lua_open’
+     size_t len_vertex_table = lua_len(L, -1);
+                               ^~~~~~~
+                               lua_open
+render_2.cpp:304:23: error: expected ‘;’ before ‘<’ token
+     for (int i = 1, i < len_vertex_array, i++) {
+                       ^
+render_2.cpp:304:23: error: expected primary-expression before ‘<’ token
+render_2.cpp:304:25: error: ‘len_vertex_array’ was not declared in this scope
+     for (int i = 1, i < len_vertex_array, i++) {
+                         ^~~~~~~~~~~~~~~~
+render_2.cpp:304:25: note: suggested alternative: ‘vertex_array’
+     for (int i = 1, i < len_vertex_array, i++) {
+                         ^~~~~~~~~~~~~~~~
+                         vertex_array
+render_2.cpp:304:46: error: expected ‘;’ before ‘)’ token
+     for (int i = 1, i < len_vertex_array, i++) {
+                                              ^
+render_2.cpp:381:23: error: expected ‘;’ before ‘<’ token
+     for (int j = 1, j < len_vertex_array, j++) {
+                       ^
+render_2.cpp:381:23: error: expected primary-expression before ‘<’ token
+render_2.cpp:381:25: error: ‘len_vertex_array’ was not declared in this scope
+     for (int j = 1, j < len_vertex_array, j++) {
+                         ^~~~~~~~~~~~~~~~
+render_2.cpp:381:25: note: suggested alternative: ‘vertex_array’
+     for (int j = 1, j < len_vertex_array, j++) {
+                         ^~~~~~~~~~~~~~~~
+                         vertex_array
+render_2.cpp:381:46: error: expected ‘;’ before ‘)’ token
+     for (int j = 1, j < len_vertex_array, j++) {
+                                              ^
+render_2.cpp:438:5: error: ‘lua_checktype’ was not declared in this scope
+     lua_checktype(L, -1, LUA_TTABLE);
+     ^~~~~~~~~~~~~
+render_2.cpp:438:5: note: suggested alternative: ‘luaL_checktype’
+     lua_checktype(L, -1, LUA_TTABLE);
+     ^~~~~~~~~~~~~
+     luaL_checktype
+render_2.cpp:450:23: error: expected ‘;’ before ‘<’ token
+     for (int k = 1, k < texture_width, k++) {
+                       ^
+render_2.cpp:450:23: error: expected primary-expression before ‘<’ token
+render_2.cpp:450:43: error: expected ‘;’ before ‘)’ token
+     for (int k = 1, k < texture_width, k++) {
+                                           ^
+render_2.cpp:467:27: error: expected ‘;’ before ‘<’ token
+         for (int l = 1, l < 257, l++) {
+                           ^
+render_2.cpp:467:27: error: expected primary-expression before ‘<’ token
+render_2.cpp:467:37: error: expected ‘;’ before ‘)’ token
+         for (int l = 1, l < 257, l++) {
+                                     ^
+render_2.cpp:476:53: warning: pointer of type ‘void *’ used in arithmetic [-Wpointer-arith]
+             texture_pixel_data[k * texture_width + l] = (uint16_t) lua_tonumber(L, -1);
+                                                     ^
+render_2.cpp:476:53: error: ‘void*’ is not a pointer-to-object type
+render_2.cpp:505:23: error: expected ‘;’ before ‘<’ token
+     for (int n = 1, n < num_triangles, n++) {
+                       ^
+render_2.cpp:505:23: error: expected primary-expression before ‘<’ token
+render_2.cpp:505:43: error: expected ‘;’ before ‘)’ token
+     for (int n = 1, n < num_triangles, n++) {
+                                           ^
+render_2.cpp:531:9: error: ‘element_array’ was not declared in this scope
+         element_array[3 * n] = (GLushort) lua_tonumber(L, -1);
+         ^~~~~~~~~~~~~
+render_2.cpp:531:9: note: suggested alternative: ‘element_data’
+         element_array[3 * n] = (GLushort) lua_tonumber(L, -1);
+         ^~~~~~~~~~~~~
+         element_data
+render_2.cpp:577:23: error: expected ‘;’ before ‘<’ token
+     for (int l = 1, l < len_vertex_array, l++) {
+                       ^
+render_2.cpp:577:23: error: expected primary-expression before ‘<’ token
+render_2.cpp:577:25: error: ‘len_vertex_array’ was not declared in this scope
+     for (int l = 1, l < len_vertex_array, l++) {
+                         ^~~~~~~~~~~~~~~~
+render_2.cpp:577:25: note: suggested alternative: ‘vertex_array’
+     for (int l = 1, l < len_vertex_array, l++) {
+                         ^~~~~~~~~~~~~~~~
+                         vertex_array
+render_2.cpp:577:46: error: expected ‘;’ before ‘)’ token
+     for (int l = 1, l < len_vertex_array, l++) {
+                                              ^
+render_2.cpp:601:24: error: base operand of ‘->’ has non-pointer type ‘dino_vertex’
+         vertex_array[l]->normal[0] = (float) lua_tonumber(L, -1);
+                        ^~
+render_2.cpp:612:24: error: base operand of ‘->’ has non-pointer type ‘dino_vertex’
+         vertex_array[l]->normal[1] = (float) lua_tonumber(L, -1);
+                        ^~
+render_2.cpp:623:24: error: base operand of ‘->’ has non-pointer type ‘dino_vertex’
+         vertex_array[l]->normal[2] = (float) lua_tonumber(L, -1);
+                        ^~
+render_2.cpp:637:9: error: ‘vertex_data’ was not declared in this scope
+         vertex_data, vertex_count,
+         ^~~~~~~~~~~
+render_2.cpp:637:9: note: suggested alternative: ‘vertex_array’
+         vertex_data, vertex_count,
+         ^~~~~~~~~~~
+         vertex_array
+render_2.cpp:637:22: error: ‘vertex_count’ was not declared in this scope
+         vertex_data, vertex_count,
+                      ^~~~~~~~~~~~
+render_2.cpp:637:22: note: suggested alternative: ‘vertex_array’
+         vertex_data, vertex_count,
+                      ^~~~~~~~~~~~
+                      vertex_array
+render_2.cpp:638:9: error: ‘element_array’ was not declared in this scope
+         element_array, num_triangles,
+         ^~~~~~~~~~~~~
+render_2.cpp:638:9: note: suggested alternative: ‘element_data’
+         element_array, num_triangles,
+         ^~~~~~~~~~~~~
+         element_data
+render_2.cpp:645:17: error: ‘struct<unnamed>’ has no member named ‘vertex_data’
+     g_resources.vertex_data = vertex_data;
+                 ^~~~~~~~~~~
+render_2.cpp:646:17: error: ‘struct<unnamed>’ has no member named ‘texture’
+     g_resources.texture = texture;
+                 ^~~~~~~
+render_2.cpp:646:27: error: ‘texture’ was not declared in this scope
+     g_resources.texture = texture;
+                           ^~~~~~~
+render_2.cpp:646:27: note: suggested alternative: ‘nextupl’
+     g_resources.texture = texture;
+                           ^~~~~~~
+                           nextupl
+render_2.cpp: In function ‘void update()’:
+render_2.cpp:683:32: error: ‘GLUT_ELPASED_TIME’ was not declared in this scope
+     int milliseconds = glutGet(GLUT_ELPASED_TIME);
+                                ^~~~~~~~~~~~~~~~~
+render_2.cpp:683:32: note: suggested alternative: ‘GLUT_ELAPSED_TIME’
+     int milliseconds = glutGet(GLUT_ELPASED_TIME);
+                                ^~~~~~~~~~~~~~~~~
+                                GLUT_ELAPSED_TIME
+render_2.cpp: In function ‘void keyboard(unsigned char, int, int)’:
+render_2.cpp:716:9: error: ‘update_flag_program’ was not declared in this scope
+         update_flag_program();
+         ^~~~~~~~~~~~~~~~~~~
+render_2.cpp:716:9: note: suggested alternative: ‘enact_flag_program’
+         update_flag_program();
+         ^~~~~~~~~~~~~~~~~~~
+         enact_flag_program
+render_2.cpp: In function ‘void init_gl_state()’:
+render_2.cpp:730:13: error: redefinition of ‘void init_gl_state()’
+ static void init_gl_state(void) {
+             ^~~~~~~~~~~~~
+render_2.cpp:42:13: note: ‘void init_gl_state()’ previously defined here
+ static void init_gl_state(void) {
+             ^~~~~~~~~~~~~
+render_2.cpp: In function ‘void render()’:
+render_2.cpp:747:21: error: ‘struct<unnamed>’ has no member named ‘flag_program’
+         g_resources.flag_program.uniforms.p_matrix,
+                     ^~~~~~~~~~~~
+render_2.cpp:753:41: error: ‘struct<unnamed struct>::<unnamed>’ has no member named ‘mv_matrix’
+         g_resources.dino_render_program.mv_matrix,
+                                         ^~~~~~~~~
+render_2.cpp:762:30: error: ‘struct<unnamed>’ has no member named ‘dino’
+     render_mesh(&g_resources.dino);
+                              ^~~~
+render_2.cpp: In function ‘int main(int, char**)’:
+render_2.cpp:780:5: error: ‘glurReshapeFunc’ was not declared in this scope
+     glurReshapeFunc(&reshape);
+     ^~~~~~~~~~~~~~~
+render_2.cpp:780:5: note: suggested alternative: ‘glutReshapeFunc’
+     glurReshapeFunc(&reshape);
+     ^~~~~~~~~~~~~~~
+     glutReshapeFunc
+Makefile.Unix:10: recipe for target 'render_2.o' failed
+make: *** [render_2.o] Error 1

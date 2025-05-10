@@ -1,0 +1,14 @@
+CFLAGS := -Wall -Werror -std=
+
+SRCS := gl-util.c \
+	mesh.c \
+	render_2.c
+
+OBJS := ${SRCS:c=o}
+PROGS := ${SRCS:.c=}
+
+.PHONY: all
+all: ${PROGS}
+
+%.o:%.c:
+	g++ -c -o 

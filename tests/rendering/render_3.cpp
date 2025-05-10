@@ -1,0 +1,312 @@
+#include <GLFW/glfw3.h>
+#include <GLES2/gl2.h>
+#include <EGL/egl.h>
+#include <stddef.h>
+#include <math.h>
+#include <stdio.h>
+#include "lua-handler.h"
+#include "file-util.h"
+#include "gl-util.h"
+
+#include <string>
+#include <iostream>
+
+#define PROJECTION_FOV_RATIO 0.7f
+#define PROJECTION_NEAR_PLANE 0.0625f
+#define PROJECTION_FAR_PLANE 256.0f
+
+#define INITIAL_WINDOW_WIDTH 800
+#define INITIAL_WINDOW_HEIGHT 600
+
+
+void error_callback(int error, const char *msg) {
+    std::string s;
+    s = " [" + std::to_string(error) + "] " + msg + '\n';
+    std::cerr << s << std::endl;
+}
+
+static struct {
+    struct dino_mesh dino;
+    struct dino_vertex *dino_vertex_array;
+
+    struct {
+        GLuint vertex_shader, fragment_shader, program;
+
+        struct {
+            GLint texture, p_matrix, mv_matrix; // Location flags for uniforms
+        } uniforms;
+
+        struct {
+            GLuint position, normal, texcoord; // Location flags for attributes
+        } attributes;
+    } dino_program;
+
+    GLfloat p_matrix[16], mv_matrix[16];
+    GLfloat eye_offset[2];
+    GLsizei window_size[2];
+} g_resources;
+
+static void update_p_matrix(GLfloat *matrix, int w, int h) {
+    GLfloat wf = (GLfloat) w, hf = (GLfloat) h;
+    GLfloat 
+        r_xy_factor = fminf(wf, hf) * 1.0f/PROJECTION_FOV_RATIO,
+        r_x = r_xy_factor/wf,
+        r_y = r_xy_factor/hf,
+        r_zw_factor = 1.0f/(PROJECTION_FAR_PLANE - PROJECTION_NEAR_PLANE),
+        r_z = (PROJECTION_NEAR_PLANE + PROJECTION_FAR_PLANE) * r_zw_factor,
+        r_w = -2.0f*PROJECTION_NEAR_PLANE*PROJECTION_FAR_PLANE*r_zw_factor;
+
+    matrix[ 0] = r_x;  matrix[ 1] = 0.0f; matrix[ 2] = 0.0f; matrix[ 3] = 0.0f;
+    matrix[ 4] = 0.0f; matrix[ 5] = r_y;  matrix[ 6] = 0.0f; matrix[ 7] = 0.0f;
+    matrix[ 8] = 0.0f; matrix[ 9] = 0.0f; matrix[10] = r_z;  matrix[11] = 1.0f;
+    matrix[12] = 0.0f; matrix[13] = 0.0f; matrix[14] = r_w;  matrix[15] = 0.0f;
+}
+
+static void update_mv_matrix(GLfloat *matrix, GLfloat *eye_offset) {
+    static const GLfloat BASE_EYE_POSITION[3] = { 0.5f, -0.25f, -1.25f };
+
+    matrix[ 0] = 1.0f; matrix[ 1] = 0.0f; matrix[ 2] = 0.0f; matrix[ 3] = 0.0f;
+    matrix[ 4] = 0.0f; matrix[ 5] = 1.0f; matrix[ 6] = 0.0f; matrix[ 7] = 0.0f;
+    matrix[ 8] = 0.0f; matrix[ 9] = 0.0f; matrix[10] = 1.0f; matrix[11] = 0.0f;
+    matrix[12] = -BASE_EYE_POSITION[0] - eye_offset[0];
+    matrix[13] = -BASE_EYE_POSITION[1] - eye_offset[1];
+    matrix[14] = -BASE_EYE_POSITION[2];
+    matrix[15] = 1.0f;
+}
+
+
+void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
+
+//static void update(void) {
+//    int milliseconds = glutGet(GLUT_ELAPSED_TIME);
+//    GLfloat seconds = (GLfloat)milliseconds * (1.0f/1000.0f);
+//
+//    update_dino_mesh
+//}
+
+
+//static void drag(int x, int y) {
+//    float w = (float)g_resources.window_size[0];
+//    float h = (float)g_resources.window_size[1];
+//    g_resources.eye_offset[0] = (float)x/w - 0.5f;
+//    g_resources.eye_offset[1] = (float)x/h + 0.5f;
+//    update_mv_matrix(g_resources.mv_matrix, g_resources.eye_offset);
+//}
+
+
+void process_input(GLFWwindow *window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    }
+}
+
+
+int bind_vertex_buffers(struct dino_vertex *vertex_array, int num_vertices) {
+    // Generate vertex buffer
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, num_vertices * 3, vertex_array->position, GL_STATIC_DRAW);
+    return 0;
+}
+
+
+static void render_mesh(struct dino_mesh const *mesh) {
+    glBindTexture(GL_TEXTURE_2D, mesh->texture);
+
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vertex_buffer);
+    glVertexAttribPointer(
+        g_resources.dino_program.attributes.position,
+        3, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
+        (void*)offsetof(struct dino_vertex, position)
+    );
+    glVertexAttribPointer(
+        g_resources.dino_program.attributes.normal,
+        3, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
+        (void*)offsetof(struct dino_vertex, normal)
+    );
+    glVertexAttribPointer(
+        g_resources.dino_program.attributes.texcoord,
+        2, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
+        (void*)offsetof(struct dino_vertex, texcoord)
+    );
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->element_buffer);
+    glDrawElements(
+        GL_TRIANGLES,
+        mesh->element_count,
+        GL_UNSIGNED_SHORT,
+        (void*)0
+    );
+}
+
+
+static void render(GLFWwindow *window) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(g_resources.dino_program.program);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(g_resources.dino_program.uniforms.texture, 0);
+
+    glUniformMatrix4fv(
+        g_resources.dino_program.uniforms.mv_matrix,
+        1, GL_FALSE,
+        g_resources.mv_matrix
+    );
+
+    glEnableVertexAttribArray(g_resources.dino_program.attributes.position);
+    glEnableVertexAttribArray(g_resources.dino_program.attributes.normal);
+    glEnableVertexAttribArray(g_resources.dino_program.attributes.texcoord);
+
+    render_mesh(&g_resources.dino);
+//    render_mesh(&g_resources.background);
+
+    glDisableVertexAttribArray(g_resources.dino_program.attributes.position);
+    glDisableVertexAttribArray(g_resources.dino_program.attributes.normal);
+    glDisableVertexAttribArray(g_resources.dino_program.attributes.texcoord);
+
+//    glutSwapBuffers()
+    glfwSwapBuffers(window);
+}
+
+
+static void enact_dino_render_program(
+    GLuint vertex_shader,
+    GLuint fragment_shader,
+    GLuint program
+) {
+    g_resources.dino_program.vertex_shader = vertex_shader;
+    g_resources.dino_program.fragment_shader = fragment_shader;
+
+    g_resources.dino_program.program = program;
+
+    g_resources.dino_program.uniforms.texture 
+        = glGetUniformLocation(program, "texture");
+    g_resources.dino_program.uniforms.p_matrix
+        = glGetUniformLocation(program, "p_matrix");
+    g_resources.dino_program.uniforms.mv_matrix
+        = glGetUniformLocation(program, "mv_matrix");
+
+    g_resources.dino_program.attributes.position 
+        = glGetAttribLocation(program, "position");
+    g_resources.dino_program.attributes.normal
+        = glGetAttribLocation(program, "normal");
+    g_resources.dino_program.attributes.texcoord
+        = glGetAttribLocation(program, "texcoord");
+//    g_resources.dino_program.attributes.shininess
+//        = glGetAttribLocation(program, "shininess");
+//    g_resources.dino_program.attributes.specular
+//        = glGetAttribLocation(program, "specular");
+}
+
+
+static int make_dino_program(
+    GLuint *vertex_shader,
+    GLuint *fragment_shader,
+    GLuint *program
+) {
+    *vertex_shader = make_shader(GL_VERTEX_SHADER, "dino2.v.glsl");
+    if (*vertex_shader == 0)
+        return 0;
+    *fragment_shader = make_shader(GL_FRAGMENT_SHADER, "dino.f.glsl");
+    if (*fragment_shader == 0)
+        return 0;
+
+    *program = make_program(*vertex_shader, *fragment_shader);
+    if (*program == 0)
+        return 0;
+
+    return 1;
+}
+
+
+static void delete_flag_program(void) {
+    glDetachShader(
+        g_resources.dino_program.program,
+        g_resources.dino_program.vertex_shader
+    );
+    glDetachShader(
+        g_resources.dino_program.program,
+        g_resources.dino_program.fragment_shader
+    );
+    glDeleteProgram(g_resources.dino_program.program);
+    glDeleteShader(g_resources.dino_program.vertex_shader);
+    glDeleteShader(g_resources.dino_program.fragment_shader);
+}
+
+
+static int make_resources() {
+    /* Retrieve resources from CAR file */
+    GLuint vertex_shader, fragment_shader, program;
+
+    const char *filepath = "/home/alphagoat/Projects/CarnivoresIII/resources/Carnivores_2plus/HUNTDAT/CERATO1.CAR";
+    car_resources dino_resources;
+
+    // Fetch vertices, element array, and texture from car file
+    if (!fetch_car_file_assets(filepath, &dino_resources)) {
+        fprintf(stderr, "Failed to fetch assets from %s\n.", filepath);
+        return 0;
+    }
+
+    if (!make_dino_program(&vertex_shader, &fragment_shader, &program))
+        return 0;
+
+    enact_dino_render_program(vertex_shader, fragment_shader, program);
+
+    g_resources.eye_offset[0] = 0.0f;
+    g_resources.eye_offset[1] = 0.0f;
+    g_resources.window_size[0] = INITIAL_WINDOW_WIDTH;
+    g_resources.window_size[1] = INITIAL_WINDOW_HEIGHT;
+
+    update_p_matrix(
+        g_resources.p_matrix,
+        INITIAL_WINDOW_WIDTH,
+        INITIAL_WINDOW_HEIGHT
+    );
+    update_mv_matrix(g_resources.mv_matrix, g_resources.eye_offset);
+
+    return 1;
+}
+
+
+int main() {
+    fprintf(stderr, "Initializing GLFW.\n");
+    glfwInit();
+    glfwSetErrorCallback(error_callback);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    fprintf(stderr, "GLFW initialized.\n");
+
+    GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+    fprintf(stderr, "Window created.\n");
+    if (window == NULL) {
+        fprintf(stderr, "Failed to create GLFW window.\n");
+        glfwTerminate();
+        return 0;
+    }
+    glfwMakeContextCurrent(window);
+//    glViewport(0, 0, 800, 600);
+
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    if (!make_resources()) {
+        fprintf(stderr, "Failed to load resources\n");
+        return 1;
+    }
+
+    // Render loop
+    while (!glfwWindowShouldClose(window)) {
+        // Process inputs
+        process_input(window);
+        render(window);
+        glfwPollEvents();
+    }
+
+    // Clean and delete all GLFW resources
+    glfwTerminate();
+    return 1;
+}
