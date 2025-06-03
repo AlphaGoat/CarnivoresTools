@@ -725,12 +725,13 @@ end
 --return CARReader
 
 
---filepath = "/home/alphagoat/Projects/CarnivoresIII/resources/Carnivores_2plus/HUNTDAT/CERATO1.CAR"
+--filepath = "/home/pthomas/Projects/CarnivoresTools/resources/Carnivores_Fallen_Kings_partial_beta_2.1.2/Carnivores_Fallen_Kings_partial_beta_2.1.2/-Game/HUNTDAT/ANIMALS/1PRIMARKIA/0COMMON/baryt.car"
 ---- 
---reader = CARReader:new(nil, filepath)
---reader:read_file_contents()
---num_vertices = reader:getNumVertices()
+--Reader = CARReader:new(nil, filepath)
+--Reader:read_file_contents()
+--num_vertices = Reader:getNumVertices()
 --print("num vertices: " .. tostring(num_vertices))
---reader:assignUVcoordsToVertices()
---reader:calcVertexNormals()
---reader:getElementArray()
+--Reader:assignUVcoordsToVertices()
+--Reader:calcVertexNormals()
+--Reader:getElementArray()
+--print("finished.")

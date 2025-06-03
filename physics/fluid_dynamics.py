@@ -52,6 +52,7 @@ def generate_perlin_noise_2d(
     y0 = np.floor(norm_Y)
     x1 = np.mod(x0 + 1, num_seed_points[1])
     y1 = np.mod(y0 + 1, num_seed_points[0])
+    import pdb; pdb.set_trace()
 
     # Convert into indices for corner points
     indices_00 = np.stack([y0.astype(np.int32),
@@ -78,6 +79,7 @@ def generate_perlin_noise_2d(
     delta_01 = np.matmul(v_01, rand_grads[indices_01[:, 0], indices_01[:, 1]])
     delta_10 = np.matmul(v_10, rand_grads[indices_10[:, 0], indices_10[:, 1]])
     delta_11 = np.matmul(v_11, rand_grads[indices_11[:, 0], indices_11[:, 1]])
+    import pdb; pdb.set_trace()
 
     # Define the noise function for each point (y, x)
     def noise(y, x):
@@ -85,7 +87,6 @@ def generate_perlin_noise_2d(
         out += joint_fade_fn(y, 1 - x)[..., None] * delta_10
         out += joint_fade_fn(1 - y, x)[..., None] * delta_01
         out += joint_fade_fn(y, x)[..., None] * delta_11
-        import pdb; pdb.set_trace()
         return out
 
     norm_Y /= num_seed_points[0]
@@ -126,10 +127,10 @@ if __name__ == "__main__":
         Y, X = np.meshgrid(y, x)
 
         U = vector_field[..., 0]
-        V = vector_field[..., 2]
+        V = vector_field[..., 1]
 
         ax.quiver(X, Y, U, V)
-        ax.suptitle("Perlin Noise")
+        ax.set_title("Perlin Noise")
         plt.show()
 
     
@@ -137,6 +138,5 @@ if __name__ == "__main__":
                                             num_seed_points=(8, 8),
                                             dampen_factor=1.0,
                                             num_iter=100)
-    import pdb; pdb.set_trace()
     plot_vector_field(vector_field)
 

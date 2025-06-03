@@ -1,5 +1,6 @@
+include "include/glad/glad.h"
 #include <GLFW/glfw3.h>
-#include <GLES2/gl2.h>
+//#include <GLES2/gl2.h>
 #include <EGL/egl.h>
 #include <stddef.h>
 #include <math.h>
@@ -24,6 +25,29 @@ void error_callback(int error, const char *msg) {
     s = " [" + std::to_string(error) + "] " + msg + '\n';
     std::cerr << s << std::endl;
 }
+
+void error_loop() {
+    GLenum err;
+    while (( err = glGetError() ) != GL_NO_ERROR ) {
+        std::cerr << err << std::endl;
+    }
+}
+
+
+//void GLAPIENTRY GLErrorMessageCallback(
+//    GLenum source,
+//    GLenum type, 
+//    GLuint id,
+//    GLenum severity,
+//    GLsizei length,
+//    const GLchar *message,
+//    const void *userParam
+//) {
+//    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+//        ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
+//        type, severity, message);
+//}
+
 
 static struct {
     struct dino_mesh dino;
@@ -98,6 +122,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
 
 
 void process_input(GLFWwindow *window) {
+//    fprintf(stderr, "processing inputs\n");
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
@@ -116,39 +141,60 @@ int bind_vertex_buffers(struct dino_vertex *vertex_array, int num_vertices) {
 
 static void render_mesh(struct dino_mesh const *mesh) {
     glBindTexture(GL_TEXTURE_2D, mesh->texture);
+    fprintf(stderr, "bind texture.\n");
+    error_loop();
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh->vertex_buffer);
+//    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_array), vertex_array, GL_STATIC_DRAW);
+    fprintf(stderr, "vertex buffer bound.\n");
+    fprintf(stderr, "ARRAY BUFFER object: %d\n", mesh->vertex_buffer);
+    error_loop();
     glVertexAttribPointer(
         g_resources.dino_program.attributes.position,
         3, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
         (void*)offsetof(struct dino_vertex, position)
     );
-    glVertexAttribPointer(
-        g_resources.dino_program.attributes.normal,
-        3, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
-        (void*)offsetof(struct dino_vertex, normal)
-    );
+    fprintf(stderr, "Assign position pointer.\n");
+    error_loop();
+//    glVertexAttribPointer(
+//        g_resources.dino_program.attributes.normal,
+//        3, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
+//        (void*)offsetof(struct dino_vertex, normal)
+//    );
     glVertexAttribPointer(
         g_resources.dino_program.attributes.texcoord,
         2, GL_FLOAT, GL_FALSE, sizeof(struct dino_vertex),
         (void*)offsetof(struct dino_vertex, texcoord)
     );
+    fprintf(stderr, "Assign texcoord pointer.\n");
+    error_loop();
+    fprintf(stderr, "bind vertex buffer.\n");
+    error_loop();
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->element_buffer);
+    fprintf(stderr, "bind elememnt buffer.\n");
+    error_loop();
     glDrawElements(
         GL_TRIANGLES,
         mesh->element_count,
         GL_UNSIGNED_SHORT,
         (void*)0
     );
+    fprintf(stderr, "draw elements.\n");
+    error_loop();
 }
 
 
 static void render(GLFWwindow *window) {
+//    fprintf(stderr, "Rendering mesh.\n");
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(g_resources.dino_program.program);
+    fprintf(stderr, "Using program.\n");
+    error_loop();
     
     glActiveTexture(GL_TEXTURE0);
+    fprintf(stderr, "Activating texture.\n");
+    error_loop();
     glUniform1i(g_resources.dino_program.uniforms.texture, 0);
 
     glUniformMatrix4fv(
@@ -156,16 +202,29 @@ static void render(GLFWwindow *window) {
         1, GL_FALSE,
         g_resources.mv_matrix
     );
+    fprintf(stderr, "After assigning matrix.\n");
+    error_loop();
 
     glEnableVertexAttribArray(g_resources.dino_program.attributes.position);
-    glEnableVertexAttribArray(g_resources.dino_program.attributes.normal);
+    fprintf(stderr, "After enabling position vertex array.\n");
+    error_loop();
+//    glEnableVertexAttribArray(g_resources.dino_program.attributes.normal);
+//    fprintf(stderr, "After enabling normal vertex array.\n");
+//    fprintf(stderr, "GL_MAX_VERTEX_ATTRIBS: %d\n", GL_MAX_VERTEX_ATTRIBS);
+//    fprintf(stderr, "normal index: %d\n", g_resources.dino_program.attributes.normal);
+//    error_loop();
     glEnableVertexAttribArray(g_resources.dino_program.attributes.texcoord);
+    fprintf(stderr, "After enabling texcoord vertex array.\n");
+    fprintf(stderr, "texcoord index: %d\n", g_resources.dino_program.attributes.texcoord);
+    error_loop();
+    fprintf(stderr, "After enabling vertices.\n");
+    error_loop();
 
     render_mesh(&g_resources.dino);
 //    render_mesh(&g_resources.background);
 
     glDisableVertexAttribArray(g_resources.dino_program.attributes.position);
-    glDisableVertexAttribArray(g_resources.dino_program.attributes.normal);
+//    glDisableVertexAttribArray(g_resources.dino_program.attributes.normal);
     glDisableVertexAttribArray(g_resources.dino_program.attributes.texcoord);
 
 //    glutSwapBuffers()
@@ -184,7 +243,7 @@ static void enact_dino_render_program(
     g_resources.dino_program.program = program;
 
     g_resources.dino_program.uniforms.texture 
-        = glGetUniformLocation(program, "texture");
+        = glGetUniformLocation(program, "our_texture");
     g_resources.dino_program.uniforms.p_matrix
         = glGetUniformLocation(program, "p_matrix");
     g_resources.dino_program.uniforms.mv_matrix
@@ -192,8 +251,8 @@ static void enact_dino_render_program(
 
     g_resources.dino_program.attributes.position 
         = glGetAttribLocation(program, "position");
-    g_resources.dino_program.attributes.normal
-        = glGetAttribLocation(program, "normal");
+//    g_resources.dino_program.attributes.normal
+//        = glGetAttribLocation(program, "normal");
     g_resources.dino_program.attributes.texcoord
         = glGetAttribLocation(program, "texcoord");
 //    g_resources.dino_program.attributes.shininess
@@ -208,7 +267,7 @@ static int make_dino_program(
     GLuint *fragment_shader,
     GLuint *program
 ) {
-    *vertex_shader = make_shader(GL_VERTEX_SHADER, "dino2.v.glsl");
+    *vertex_shader = make_shader(GL_VERTEX_SHADER, "dino.v.glsl");
     if (*vertex_shader == 0)
         return 0;
     *fragment_shader = make_shader(GL_FRAGMENT_SHADER, "dino.f.glsl");
@@ -242,17 +301,21 @@ static int make_resources() {
     /* Retrieve resources from CAR file */
     GLuint vertex_shader, fragment_shader, program;
 
-    const char *filepath = "/home/alphagoat/Projects/CarnivoresIII/resources/Carnivores_2plus/HUNTDAT/CERATO1.CAR";
-    car_resources dino_resources;
+    const char *filepath = "../resources/Carnivores_Fallen_Kings_partial_beta_2.1.2/Carnivores_Fallen_Kings_partial_beta_2.1.2/-Game/HUNTDAT/ANIMALS/1PRIMARKIA/0COMMON/baryt.car";
+//    car_resources dino_resources;
+    car_resources *dino_resources = (car_resources *) malloc(sizeof(car_resources));
 
     // Fetch vertices, element array, and texture from car file
-    if (!fetch_car_file_assets(filepath, &dino_resources)) {
+//    if (!fetch_car_file_assets(filepath, &dino_resources)) {
+    if (!fetch_car_file_assets(filepath, dino_resources)) {
         fprintf(stderr, "Failed to fetch assets from %s\n.", filepath);
         return 0;
     }
+    fprintf(stderr, "CAR assets retrieved. Making dino program...\n");
 
     if (!make_dino_program(&vertex_shader, &fragment_shader, &program))
         return 0;
+    fprintf(stderr, "dino program initialized\n");
 
     enact_dino_render_program(vertex_shader, fragment_shader, program);
 
@@ -281,6 +344,8 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     fprintf(stderr, "GLFW initialized.\n");
 
+//    glEnable(GLFW_DEBUG_OUTPUT);
+
     GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
     fprintf(stderr, "Window created.\n");
     if (window == NULL) {
@@ -293,17 +358,30 @@ int main() {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    // glad: load all OpenGL function pointers
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+        fprintf(stderr, "Failed to initialize GLAD\n");
+        return 0;
+    }
+
     if (!make_resources()) {
         fprintf(stderr, "Failed to load resources\n");
-        return 1;
+        return 0;
     }
+    fprintf(stderr, "Resources made.\n");
+    error_loop();
 
     // Render loop
     while (!glfwWindowShouldClose(window)) {
         // Process inputs
         process_input(window);
+        fprintf(stderr, "process input\n");
+        error_loop();
         render(window);
         glfwPollEvents();
+        fprintf(stderr, "At end of rendering loop.\n");
+        error_loop();
+        break;
     }
 
     // Clean and delete all GLFW resources

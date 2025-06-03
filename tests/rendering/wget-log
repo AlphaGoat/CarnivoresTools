@@ -1,0 +1,11 @@
+--2025-05-15 15:20:53--  https://glad.dav1d.de/
+Resolving glad.dav1d.de (glad.dav1d.de)... 104.21.38.63, 172.67.219.181, 2606:4700:3033::ac43:dbb5, ...
+Connecting to glad.dav1d.de (glad.dav1d.de)|104.21.38.63|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: ‘index.html’
+
+index.html                             [<=>                                                            ]       0  --.-KB/s               index.html                             [ <=>                                                           ]  84.33K   420KB/s               index.html                             [  <=>                                                          ] 144.63K   581KB/s    in 0.2s    
+
+2025-05-15 15:20:54 (581 KB/s) - ‘index.html’ saved [148105]
+

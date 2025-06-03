@@ -1,13 +1,15 @@
-CFLAGS := -Wall -Werror -std=
+#CFLAGS := -Wall -Werror -std=
+CFLAGS := -Wall -Werror 
 GL_INCLUDE = /usr/X12R6/include
 GL_LIB = /usr/X11R6/lib
-LUA_LIB = /usr/include/lua5.1
+LUA_LIB = /usr/include/lua5.3
 
-dino: file-util.o gl-util.o lua-handler.o render_3.o
-	g++ -o dino $^ -L$(GL_LIB)  -I$(LUA_LIB) -lm -lGL -lGLEW -llua5.1 -lglfw
+dino: file-util.o gl-util.o lua-handler.o render_3.o 
+#	g++ -o dino $^ -L$(GL_LIB)  -I$(LUA_LIB) -lm -lGL -lGLEW -llua5.3 -lglfw 
+	g++ glad.c -g -o dino $^ -L$(GL_LIB)  -I$(LUA_LIB) -lm -lGL -llua5.3 -lglfw 
 
 .cpp.o:
-	g++ -c -o $@ $< -I$(GL_INCLUDE) -I$(LUA_LIB)
+	g++ -c -g -o $@ $< -I$(GL_INCLUDE) -I$(LUA_LIB) 
 
 clean:
 	rm -f dino *.o

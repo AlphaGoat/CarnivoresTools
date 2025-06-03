@@ -1,10 +1,11 @@
 #include <stdlib.h>
-#include <GL/glew.h>
-#ifdef __APPLE__
-# include <GLut/glut.h>
-#else
-# include <GL/glut.h>
-#endif
+#include "include/glad/glad.h"
+//#include <GL/glew.h>
+//#ifdef __APPLE__
+//# include <GLut/glut.h>
+//#else
+//# include <GL/glut.h>
+//#endif
 #include <stddef.h>
 #include <math.h>
 #include <stdio.h>

@@ -1,10 +1,19 @@
 #include <stdexcept>
-#include <GL/glew.h>
-#include <GL/glut.h>
+#include "include/glad/glad.h"
+//#include <GL/glew.h>
+//#include <GL/glut.h>
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
 #include "lua-handler.h"
+
+#include <iostream>
+void error_loop_2() {
+    GLenum err;
+    while (( err = glGetError() ) != GL_NO_ERROR ) {
+        std::cerr << err << std::endl;
+    }
+}
 
 
 static int initialize_car_reader_object(
@@ -340,12 +349,13 @@ GLushort *fetch_element_array(lua_State *L, int *element_count) {
     luaL_checktype(L, -1, LUA_TTABLE);
 
     /* Get number of elements in table */
-    int e = lua_objlen(L, -1);
+    int e = lua_rawlen(L, -1);
     *element_count = e;
+    fprintf(stderr, "element_count: %d\n", *element_count);
 
     /* Initialize empty element array, to fill in with
      * values returned by lua program */
-    GLushort *element_data = (GLushort*) malloc(*element_count * sizeof(GLushort));
+    GLushort *element_data = (GLushort*) malloc(*element_count * 3 * sizeof(GLushort));
 
     for (int n = 1; n < *element_count + 1; n++) {
         /* Get table entry at index n */
@@ -421,7 +431,7 @@ dino_vertex *initialize_dino_vertices(lua_State *L, int *num_vertices) {
     /* Initialize a dino mesh object and fill with contents of CAR file 
        Params: 
            lua_State *L: reference to current lua state (with the CARReader
-           object at the top of the stack
+           object at the top of the stack)
     */
 
     /* First, get number of vertices */
@@ -506,7 +516,7 @@ uint16_t *make_texture(lua_State *L, int *width, int *height) {
     fprintf(stderr, "Confirmed texture is a table.\n");
 
     /* Get pixel height of texture */
-    size_t texture_height = lua_objlen(L, -1);
+    size_t texture_height = lua_rawlen(L, -1);
     size_t texture_width = 256;
 
     *height = texture_height;
@@ -619,8 +629,10 @@ int initialize_dino_mesh(
     fprintf(stderr, "element array retrieved succesfully.\n");
 
     // Generate buffers for elements and vertices
+    fprintf(stderr, "binding element and vertex arrays to buffers.\n");
     glGenBuffers(1, &out_mesh->vertex_buffer);
     glGenBuffers(1, &out_mesh->element_buffer);
+    fprintf(stderr, "Buffers generated.\n");
     out_mesh->element_count = element_count;
 
     glBindBuffer(GL_ARRAY_BUFFER, out_mesh->vertex_buffer);
@@ -630,6 +642,8 @@ int initialize_dino_mesh(
         vertex_data,
         hint
     );
+    fprintf(stderr, "Vertex array bound.\n");
+    error_loop_2();
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out_mesh->element_buffer);
     glBufferData(
@@ -638,8 +652,12 @@ int initialize_dino_mesh(
         element_data,
         GL_STATIC_DRAW
     );
+    fprintf(stderr, "Finished binding vertex and element arrays.\n");
+    free((void*)element_data);
+    error_loop_2();
 
     // Initialize GL texture
+    fprintf(stderr, "binding texture\n");
     GLuint texture;
     float border_color[] = { 1.0f, 1.0f, 0.0f, 1.0f };
     glGenTextures(1, &texture);
@@ -649,16 +667,24 @@ int initialize_dino_mesh(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_BORDER);
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border_color);
+    fprintf(stderr, "texture parameters set\n");
+    error_loop_2();
     glTexImage2D(
         GL_TEXTURE_2D, 0,
-        GL_RGB,
+        GL_RGB5,
 //        texture_width, texture_height, 0,
         w, h, 0,
-        GL_RGB5, GL_UNSIGNED_SHORT,
+//        GL_RGB5, GL_UNSIGNED_SHORT,
+        GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1,
         (void*) texture_pixel_data
     );
+    fprintf(stderr, "texture generated\n");
+    error_loop_2();
+
+    glGenerateMipmap(GL_TEXTURE_2D);
     out_mesh->texture = texture;
     free(texture_pixel_data);
+    fprintf(stderr, "Texture bound in GL.\n");
 
     return 1;
 }
@@ -690,6 +716,13 @@ int fetch_car_file_assets(const char *filepath, struct car_resources *resources)
     /* Retrieve `read_file_contents` method */
     lua_getfield(L, -1, "read_file_contents");
 
+    if (!lua_isfunction(L, -1)) {
+        fprintf(stderr, "Could not retrieve `read_file_contents` method of CARReader class\n");
+        snprintf(err, errlen, "New not a valid function");
+        lua_close(L);
+        return 0;
+    }
+
     /* Copy (don't move) the CAR reader object so it's the 
      * first argument. Meaning we're doing CARReader:read_file_contents.
      * We want the copy because we want to leave the car_reader 
@@ -708,8 +741,9 @@ int fetch_car_file_assets(const char *filepath, struct car_resources *resources)
     /* Get array of vertices from CAR reader object */
     int num_vertices = -1;
     try {
-        struct dino_vertex* vertex_array = initialize_dino_vertices(L, &num_vertices); 
-        resources->dino_vertex_array = vertex_array;
+//        struct dino_vertex* vertex_array = initialize_dino_vertices(L, &num_vertices); 
+//        resources->dino_vertex_array = vertex_array;
+        resources->dino_vertex_array = initialize_dino_vertices(L, &num_vertices); 
     } catch (std::runtime_error e) {
         lua_close(L);
         return 0;
@@ -723,6 +757,7 @@ int fetch_car_file_assets(const char *filepath, struct car_resources *resources)
         lua_close(L);
         return 0;
     }
+    fprintf(stderr, "Mesh initialized\n");
 
     /* Close out our lua stack */
     lua_close(L);

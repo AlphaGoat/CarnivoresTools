@@ -1,4 +1,5 @@
-#include <GL/glew.h>
+//#include <GL/glew.h>
+#include "include/glad/glad.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
